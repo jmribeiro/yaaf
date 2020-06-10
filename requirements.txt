@@ -1,0 +1,11 @@
+numpy
+matplotlib
+gym
+gym[atari]
+torch
+torchvision
+tensorflow
+sklearn
+pyyaml
+pyparsing
+tqdm

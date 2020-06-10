@@ -1,0 +1,2 @@
+from examples.pursuit.metrics.PreyCapturesEveryTimestepIntervalMetric import PreyCapturesEveryTimestepIntervalMetric
+from examples.pursuit.metrics.TotalPreyCapturesMetric import TotalPreyCapturesMetric
