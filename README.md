@@ -92,7 +92,7 @@ from yaaf.evaluation import AverageEpisodeReturnMetric, TotalTimestepsMetric
 
 env = gym.make("CartPole-v0")
 layers = [(64, "relu"), (64, "relu")]
-agent = MLPDQNAgent(num_features=env.observation_space[0], num_actions=env.action_space.n, layers=layers)
+agent = MLPDQNAgent(num_features=env.observation_space.shape[0], num_actions=env.action_space.n, layers=layers)
 
 metrics = [AverageEpisodeReturnMetric(), TotalTimestepsMetric()]
 runner = EpisodeRunner(100, agent, env, metrics, render=True).run()
@@ -105,11 +105,11 @@ https://research.nvidia.com/publication/reinforcement-learning-through-asynchron
 ```python
 from yaaf.environments.wrappers import NvidiaAtari2600Wrapper
 from yaaf.agents.hga3c import HybridGA3CAgent
-from yaaf.execution import ParallelRunner
+from yaaf.execution import AsynchronousParallelRunner
 
 num_processes = 8
 
-envs = [NvidiaAtari2600Wrapper("SpaceInvadersDeterministic-v4") 
+envs = [NvidiaAtari2600Wrapper("SpaceInvadersDeterministic-v4")
         for _ in range(num_processes)
 ]
 
@@ -120,12 +120,17 @@ hga3c = HybridGA3CAgent(
         )
 
 hga3c.start_threads()
-trainer = ParallelRunner(
-            agents=hga3c.workers, 
-            environments=envs, 
-            max_episodes=150000, 
-            render_ids=[0, 1, 2]
-          ).run()
+trainer = AsynchronousParallelRunner(
+    agents=hga3c.workers,
+    environments=envs,
+    max_episodes=150000,
+    render_ids=[0, 1, 2]
+)
+
+trainer.start()
+while trainer.running:
+    continue
+
 hga3c.save(f"hga3c_space_invaders")
 hga3c.stop_threads()
 ```
@@ -143,7 +148,7 @@ from yaaf.models.feature_extraction import MLPFeatureExtractor
 
 # Setup env
 env = gym.make("CartPole-v0")
-num_features = env.observation_space[0]
+num_features = env.observation_space.shape[0]
 num_actions = env.action_space.n
 
 # Setup model

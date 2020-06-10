@@ -14,7 +14,7 @@ class AsynchronousParallelRunner(Process):
     def __init__(self,
                  agents: Sequence[Agent],
                  environments: Sequence[Env],
-                 shared_observers: Optional[Sequence[callable]],
+                 shared_observers: Optional[Sequence[callable]] = None,
                  max_timesteps: int = math.inf,
                  max_episodes: int = math.inf,
                  max_seconds: float = math.inf,
@@ -45,6 +45,8 @@ class AsynchronousParallelRunner(Process):
 
         render_ids = render_ids or []
         render_lock = RLock() if len(render_ids) > 1 else None
+
+        shared_observers = shared_observers or []
 
         self._runners = [
             Runner(

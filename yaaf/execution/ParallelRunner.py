@@ -14,7 +14,7 @@ class ParallelRunner:
     def __init__(self,
                  agents: Sequence[Agent],
                  environments: Sequence[Env],
-                 shared_observers: Optional[Sequence[callable]],
+                 shared_observers: Optional[Sequence[callable]] = None,
                  max_timesteps: int = math.inf,
                  max_episodes: int = math.inf,
                  max_seconds: float = math.inf,

@@ -32,9 +32,9 @@ class ResetOnTerminalWrapper(Wrapper):
         self._observation = super().reset(**kwargs)
         return self._observation
 
-    def render(self, mode='human', **kwargs):
-        if "lock" in kwargs:
-            with kwargs["lock"]:
+    def render(self, mode='human', lock=None, **kwargs):
+        if lock is not None:
+            with lock:
                 return super().render(mode, **kwargs)
         else:
             return super().render(mode, **kwargs)
