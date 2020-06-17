@@ -205,6 +205,15 @@ class MarkovDecisionProcess(Env, ABC):
         return self.rewards
 
     @property
+    def discount_factor(self):
+        return self._discount_factor
+
+    @property
+    def gamma(self):
+        """Alias for self.discount_factor"""
+        return self._discount_factor
+
+    @property
     def initial_state_distribution(self):
         return self._miu
 

@@ -4,9 +4,10 @@ import numpy as np
 from sklearn import datasets
 
 from examples.character_recognition.OCRDataset import OCRDataset
-from examples.character_recognition.classifiers import FeedForwardNetwork, ConvNetForOCRDataset
+from examples.character_recognition.ConvNetForOCRDataset import ConvNetForOCRDataset
 
 from yaaf import rmdir
+from yaaf.models.FeedForwardNetwork import FeedForwardNetwork
 
 
 class SupervisedLearningTests(TestCase):

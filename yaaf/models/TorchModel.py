@@ -133,15 +133,13 @@ class TorchModel(Module):
         self._device = torch.device("cuda:0" if torch.cuda.is_available() and self._cuda else "cpu")
 
         if self._cuda and not torch.cuda.is_available():
-            warning(f"Unable to deploy model into device {self._device} (cuda not available)."
-                  f" Using device {self._device}.")
-        else:
+            warning(f"Unable to deploy model gpu (cuda not available). Using device {self._device}.")
+        elif self._cuda:
             try:
                 self.to(self._device)
             except RuntimeError as e:
                 self._device = torch.device("cpu")
-                warning(f"Unable to deploy model into device {self._device} ({e}). "
-                      f"Using device {self._device}.")
+                warning(f"Unable to deploy model gpu ({e}). Using device {self._device}.")
                 self.to(self._device)
 
     def reset_optimizer_state(self):
