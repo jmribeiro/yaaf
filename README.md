@@ -51,6 +51,7 @@ YAAF is not yet another deep reinforcement learning framework.
 
 If you are looking for high-quality implementations of state-of-the-art algorithms, then I suggest the following libraries:
 
+- [OpenAI Spinning Up (2020)](https://spinningup.openai.com/en/latest/)
 - [Acme (2020)](https://github.com/deepmind/acme)
 - [Stable-Baselines (2019)](https://github.com/hill-a/stable-baselines)
 - [RLLib (2019)](https://github.com/ray-project/ray/tree/master/rllib)
