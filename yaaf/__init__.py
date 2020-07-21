@@ -1,6 +1,7 @@
 import os
 import shutil
 from collections import MutableMapping, namedtuple
+import numpy as np
 
 import pathlib
 
@@ -38,3 +39,7 @@ def flatten_dict(dictionary, parent_key='', separator='.'):
         if isinstance(value, MutableMapping): items.extend(flatten_dict(value, key, separator).items())
         else: items.append((key, value))
     return dict(items)
+
+
+def ndarray_index_from(collection, array):
+    return [np.array_equal(array, other) for other in collection].index(True)

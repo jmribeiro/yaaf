@@ -1,6 +1,6 @@
 import numpy as np
 
-from yaaf.environments.mdp import MarkovDecisionProcess as MDP
+from yaaf.environments.markov import MarkovDecisionProcess as MDP
 
 
 class WindyGridWorldMDP(MDP):
@@ -97,19 +97,19 @@ class WindyGridWorldMDP(MDP):
     # ############## #
 
     @staticmethod
-    def setup_transition_probabilities(state_space, action_space, wind):
+    def setup_transition_probabilities(states, action_space, wind):
 
-        X = len(state_space)
+        X = len(states)
         A = len(action_space)
 
         P = np.zeros((A, X, X))
 
-        rows = state_space[-1][0] + 1
-        columns = state_space[-1][1] + 1
+        rows = states[-1][0] + 1
+        columns = states[-1][1] + 1
 
         for s1 in range(X):
 
-            state = state_space[s1]
+            state = states[s1]
 
             s1_transitions = dict()
 
@@ -122,15 +122,15 @@ class WindyGridWorldMDP(MDP):
                 s1_transitions[action][0] = max(min(s1_transitions[action][0], rows - 1), 0)
                 s1_transitions[action][1] = max(min(s1_transitions[action][1], columns - 1), 0)
                 next_state = s1_transitions[action]
-                s2 = MDP.state_index_from(state_space, next_state)
+                s2 = MDP.state_index_from(states, next_state)
                 P[action][s1, s2] = 1.0
 
         return P
 
     @staticmethod
-    def setup_rewards(state_space, action_space, goal_state):
-        X = len(state_space)
+    def setup_rewards(states, action_space, goal_state):
+        X = len(states)
         A = len(action_space)
         R = np.full((X, A), -1.0)
-        R[MDP.state_index_from(state_space, goal_state), :] = 0.0
+        R[MDP.state_index_from(states, goal_state), :] = 0.0
         return R

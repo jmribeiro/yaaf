@@ -1,6 +1,6 @@
 import numpy as np
 
-from yaaf.environments.mdp import MarkovDecisionProcess as MDP
+from yaaf.environments.markov import MarkovDecisionProcess as MDP
 
 
 class CliffWalkMDP(MDP):
@@ -47,9 +47,9 @@ class CliffWalkMDP(MDP):
 
     @staticmethod
     def setup_transition_probabilities(rows, columns,
-                                       state_space, directions,
+                                       states, directions,
                                        start_state_index, goal_state_index, cliff_state_indices):
-        X = len(state_space)
+        X = len(states)
         num_actions = len(directions)
         P = np.zeros((num_actions, X, X))
         for x in range(X):
@@ -61,13 +61,13 @@ class CliffWalkMDP(MDP):
                 # Staying in same place
                 P[:, x, x] = 1.0  # Not necessary due to restart
             else:
-                column, row = state_space[x]
+                column, row = states[x]
                 for a in range(num_actions):
                     dx, dy = directions[a]
                     next_column = min(columns - 1, max(0, column + dx))
                     next_row = min(rows - 1, max(0, row + dy))
                     next_state = np.array([next_column, next_row])
-                    y = MDP.state_index_from(state_space, next_state)
+                    y = MDP.state_index_from(states, next_state)
                     P[a, x, y] = 1.0
         return P
 

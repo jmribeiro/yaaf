@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='yaaf',
-    version='1.0.3',
+    version='1.0.4',
     description='YAAF: Yet Another Agents Framework',
     long_description=long_description,
     long_description_content_type="text/markdown",
