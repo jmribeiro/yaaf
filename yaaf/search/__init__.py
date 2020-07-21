@@ -1,2 +1,2 @@
 from yaaf.search.MCTSNode import MCTSNode
-from yaaf.search.MDPMCTSNode import MDPMCTSNode
+from yaaf.search.markovMCTSNode import MDPMCTSNode

@@ -1,27 +1,32 @@
 import math
-from abc import ABC, abstractmethod
 from typing import Sequence, Optional
 
 import numpy as np
 from gym import Env
 from gym.envs.registration import EnvSpec
 from gym.spaces import Box, Discrete
+from yaaf import ndarray_index_from
 
 
-class MarkovDecisionProcess(Env, ABC):
+class MarkovDecisionProcess(Env):
 
     def __init__(self, name: str,
-                 state_space: Sequence[np.ndarray], action_space: Sequence[int],
-                 transition_probabilities: np.ndarray, rewards: np.ndarray,
-                 discount_factor: float, initial_state_distribution: np.ndarray,
+                 states: Sequence[np.ndarray],
+                 actions: Sequence[int],
+                 transition_probabilities: np.ndarray,
+                 rewards: np.ndarray,
+                 discount_factor: float,
+                 initial_state_distribution: np.ndarray,
                  min_value_iteration_error: float = 10e-8,
+                 state_meanings: Optional[Sequence[str]] = None,
                  action_meanings: Optional[Sequence[str]] = None):
 
         super(MarkovDecisionProcess, self).__init__()
 
         # MDP (S, A, P, R, gamma, miu)
-        self._state_space = state_space
-        self.action_space = Discrete(len(action_space))
+        self._states = states
+        self._actions = actions
+        self.action_space = Discrete(len(actions))
         self._P = transition_probabilities
         self._R = rewards
         self._discount_factor = discount_factor
@@ -29,16 +34,17 @@ class MarkovDecisionProcess(Env, ABC):
 
         # Metadata (OpenAI Gym)
         self.spec = EnvSpec(id=name)
-        state_space_tensor = np.array(state_space).astype(np.float)
+        states_tensor = np.array(states).astype(np.float)
         self.observation_space = Box(
-            low=state_space_tensor.min(),
-            high=state_space_tensor.max(),
-            shape=self._state_space[0].shape,
-            dtype=state_space_tensor.dtype)
-        self._num_states = state_space_tensor.shape[0]
-        self._num_actions = len(action_space)
+            low=states_tensor.min(),
+            high=states_tensor.max(),
+            shape=self._states[0].shape,
+            dtype=states_tensor.dtype)
+        self._num_states = states_tensor.shape[0]
+        self._num_actions = len(actions)
         self.reward_range = (rewards.min(), rewards.max())
         self.metadata = {}
+        self.state_meanings = state_meanings or []
         self.action_meanings = action_meanings or []
 
         # Value Iteration
@@ -49,7 +55,7 @@ class MarkovDecisionProcess(Env, ABC):
 
     def reset(self):
         x = np.random.choice(range(self.num_states), p=self._miu)
-        initial_state = self._state_space[x]
+        initial_state = self._states[x]
         self._state = initial_state
         return initial_state
 
@@ -66,14 +72,14 @@ class MarkovDecisionProcess(Env, ABC):
 
         # Next state
         y = np.random.choice(self.num_states, p=transition_probabilities)
-        next_state = self.S[y]
+        next_state = self.states[y]
 
         # Reward
-        if self.R.shape == (self.num_states, self.A):
+        if self.R.shape == (self.num_states, self.num_actions):
             reward = self.R[x, action]
         elif self.R.shape == (self.num_states,):
             reward = self.R[y]
-        elif self.R.shape == (self.num_states, self.A, self.num_states):
+        elif self.R.shape == (self.num_states, self.num_actions, self.num_states):
             reward = self.R[x, action, y]
         else:
             raise ValueError("Invalid reward matrix R.")
@@ -91,7 +97,7 @@ class MarkovDecisionProcess(Env, ABC):
         the optimal policy for the MDP using value iteration.
         """
         if not hasattr(self, "_pi"):
-            self._pi = np.zeros((self.num_states, self.A))
+            self._pi = np.zeros((self.num_states, self.num_actions))
             for s in range(self.num_states):
                 optimal_actions = np.argwhere(self.q_values[s] == self.q_values[s].max()).reshape(-1)
                 self._pi[s, optimal_actions] = 1.0 / len(optimal_actions)
@@ -133,7 +139,7 @@ class MarkovDecisionProcess(Env, ABC):
         elif self.R.shape == (X,):
             # FIXME - Find clever way
             R = np.zeros((X, A))
-            for state in self.S:
+            for state in self.states:
                 s = self.state_index(state)
                 R[s, :] = self.R[s]
         elif self.R.shape == (X, A, X):
@@ -165,23 +171,19 @@ class MarkovDecisionProcess(Env, ABC):
         return self._state
 
     @property
-    def S(self):
-        """Returns the state space"""
-        return self._state_space
+    def states(self):
+        return self._states
 
     @property
     def num_states(self):
-        """Returns the total number of states X"""
         return self._num_states
 
     @property
-    def num_actions(self):
-        """Alias for self.num_actions"""
-        return self._num_actions
+    def actions(self):
+        return self._actions
 
     @property
-    def A(self):
-        """Alias for self.num_actions"""
+    def num_actions(self):
         return self._num_actions
 
     @property
@@ -230,17 +232,12 @@ class MarkovDecisionProcess(Env, ABC):
             Returns the index of a given state in the state space.
             If the state is unspecified (None), returns the index of the current state st.
         """
-        return self.state_index(self.state) if state is None else self.state_index_from(self.S, state)
+        return self.state_index(self.state) if state is None else self.state_index_from(self.states, state)
 
     @staticmethod
-    def state_index_from(state_space, state):
+    def state_index_from(states, state):
         """Returns the index of a state (array) in a list of states"""
-        try:
-            return [np.array_equal(state, other_state) for other_state in state_space].index(True)
-        except ValueError:
-            print()
+        return ndarray_index_from(states, state)
 
-    @abstractmethod
     def is_terminal(self, state):
-        """Returns True if state is terminal, False otherwise"""
-        raise NotImplementedError()
+        return False

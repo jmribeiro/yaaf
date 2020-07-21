@@ -3,8 +3,8 @@ from unittest import TestCase, main
 import numpy as np
 
 from yaaf.agents import SARSAAgent, QLearningAgent, GreedyAgent
-from yaaf.environments.mdp import CliffWalkMDP
-from yaaf.environments.mdp.WindyGridWorldMDP import WindyGridWorldMDP
+from yaaf.environments.markov import CliffWalkMDP
+from yaaf.environments.markov.WindyGridWorldMDP import WindyGridWorldMDP
 from yaaf.evaluation.TimestepsPerEpisodeMetric import TimestepsPerEpisodeMetric
 from yaaf.execution import EpisodeRunner
 

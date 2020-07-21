@@ -39,7 +39,7 @@ class PursuitAgentsTest(TestCase):
 
     def _test_agent_performance(self, agent: Agent,
                                 teammates="teammate aware", features="default",
-                                num_episodes=32, acceptable_avg_steps_til_capture=9.5):
+                                num_episodes=32, acceptable_avg_steps_til_capture=10):
 
         from yaaf.evaluation import TimestepsPerEpisodeMetric
 
@@ -69,7 +69,7 @@ class HandcodedAgentsTest(PursuitAgentsTest):
         self._test_agent_performance(ProbabilisticDestinationsAgent(id=0, world_size=(5, 5)),
                                      teammates="greedy", acceptable_avg_steps_til_capture=9.5)
         self._test_agent_performance(ProbabilisticDestinationsAgent(id=0, world_size=(5, 5)),
-                                     teammates="teammate aware", acceptable_avg_steps_til_capture=13)
+                                     teammates="teammate aware", acceptable_avg_steps_til_capture=14)
 
 
 class DeepRLAgents(PursuitAgentsTest):

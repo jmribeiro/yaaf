@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from yaaf.agents import GreedyAgent
-from yaaf.environments.mdp import WindyGridWorldMDP
+from yaaf.environments.markov import WindyGridWorldMDP
 from yaaf.evaluation import TimestepsPerEpisodeMetric, AverageReturnMetric
 from yaaf.evaluation import TotalTimestepsMetric
 from yaaf.execution import EpisodeRunner

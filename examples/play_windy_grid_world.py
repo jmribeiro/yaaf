@@ -1,7 +1,7 @@
 import argparse
 
 from yaaf.agents import HumanAgent
-from yaaf.environments.mdp.WindyGridWorldMDP import WindyGridWorldMDP
+from yaaf.environments.markov.WindyGridWorldMDP import WindyGridWorldMDP
 from yaaf.execution import EpisodeRunner
 
 if __name__ == '__main__':
