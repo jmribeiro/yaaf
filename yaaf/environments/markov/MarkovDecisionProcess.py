@@ -25,8 +25,14 @@ class MarkovDecisionProcess(Env):
 
         # MDP (S, A, P, R, gamma, miu)
         self._states = states
+        self._num_states = len(states)
+        self.state_meanings = state_meanings or ["<UNK>" for _ in range(self._num_states)]
+
         self._actions = actions
+        self._num_actions = len(actions)
         self.action_space = Discrete(len(actions))
+        self.action_meanings = action_meanings or ["<UNK>" for _ in range(self._num_actions)]
+
         self._P = transition_probabilities
         self._R = rewards
         self._discount_factor = discount_factor
@@ -40,17 +46,13 @@ class MarkovDecisionProcess(Env):
             high=states_tensor.max(),
             shape=self._states[0].shape,
             dtype=states_tensor.dtype)
-        self._num_states = states_tensor.shape[0]
-        self._num_actions = len(actions)
+
         self.reward_range = (rewards.min(), rewards.max())
         self.metadata = {}
-        self.state_meanings = state_meanings or []
-        self.action_meanings = action_meanings or []
 
         # Value Iteration
         self._min_value_iteration_error = min_value_iteration_error
 
-        # TODO - Remove this
         self._state = self.reset()
 
     def reset(self):
@@ -66,25 +68,19 @@ class MarkovDecisionProcess(Env):
         return next_state, reward, is_terminal, {}
 
     def transition(self, state, action):
-
         x = self.state_index(state)
-        transition_probabilities = self.P[action, x]
-
-        # Next state
-        y = np.random.choice(self.num_states, p=transition_probabilities)
+        y = np.random.choice(self.num_states, p=self.P[action, x])
         next_state = self.states[y]
-
-        # Reward
-        if self.R.shape == (self.num_states, self.num_actions):
-            reward = self.R[x, action]
-        elif self.R.shape == (self.num_states,):
-            reward = self.R[y]
-        elif self.R.shape == (self.num_states, self.num_actions, self.num_states):
-            reward = self.R[x, action, y]
-        else:
-            raise ValueError("Invalid reward matrix R.")
-
+        reward = self.reward(x, action, y)
         return next_state, reward
+
+    def reward(self, state, action, next_state):
+        x = self.state_index(state) if not isinstance(state, int) else state
+        y = self.state_index(next_state) if not isinstance(next_state, int) else next_state
+        if self.R.shape == (self.num_states, self.num_actions): return self.R[x, action]
+        elif self.R.shape == (self.num_states,): return self.R[y]
+        elif self.R.shape == (self.num_states, self.num_actions, self.num_states): return self.R[x, action, y]
+        else: raise ValueError("Invalid reward matrix R.")
 
     # ############### #
     # Value Iteration #
