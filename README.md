@@ -9,6 +9,7 @@ _An RL research-oriented framework for agent prototyping and evaluation_
     - [DQN for Cart Pole](#2---cartpole-dqn)
     - [A3C (on GPU) for Space Invaders](#3---asynchronous-advantage-actor-critic-on-gpu)
     - [DQN from scratch for CartPole](#4---cartpole-dqn-from-scratch)
+- [Markov Submodule](#markov)    
 - [Citing](#citing-the-project)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -164,6 +165,10 @@ agent = DQNAgent(network, num_actions,
 metrics = [AverageEpisodeReturnMetric(), TotalTimestepsMetric()]
 runner = EpisodeRunner(100, agent, env, metrics, render=True).run()
 ```
+
+## Markov Sub-module
+
+TODO
 
 ## Citing the Project
 
