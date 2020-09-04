@@ -43,3 +43,52 @@ def flatten_dict(dictionary, parent_key='', separator='.'):
 
 def ndarray_index_from(collection, array):
     return [np.array_equal(array, other) for other in collection].index(True)
+
+
+def replace_in_directory(path: str, old: str, new: str):
+
+    """
+    Replaces a string found in any subdirectory or file of a directory (recursively).
+
+    E.g.
+
+        - resources
+            - results
+                - agent1
+                    - agent1_scores
+                    - agent1_other_stuff
+                    - agent1_etc
+
+        replace_in_directory("resources", old="agent1", new="dqn")
+
+        - resources
+            - results
+                - dqn
+                    - dqn_scores
+                    - dqn_other_stuff
+                    - dqn_etc
+
+        replace_in_directory("resources/results/dqn", old="dqn_", new="")
+
+        - resources
+            - results
+                - dqn
+                    - scores
+                    - other_stuff
+                    - etc
+
+    """
+
+    for subdirectory in subdirectories(path):
+        replace_in_directory(f"{path}/{subdirectory}", old, new)
+
+    for file in files(path):
+        new_file = file.replace(old, new)
+        os.rename(f"{path}/{file}", f"{path}/{new_file}")
+
+    path = "/".join(path.split("/")[:-1])
+    directory = path.split("/")[-1]
+
+    if old in directory:
+        directory_new = f"{path}/{directory.replace(old, new)}"
+        os.rename(path, directory_new)
