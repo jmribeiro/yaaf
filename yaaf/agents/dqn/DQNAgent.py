@@ -67,7 +67,7 @@ class DQNAgent(Agent):
     def experience_replay(self):
         replay_batch = self._replay_buffer.sample()
         X, y = self._preprocess(replay_batch)
-        training_losses, training_accuracies, _ = self._network.update(X, y, epochs=1, batch_size=X.shape[0])
+        training_losses, training_accuracies, _ = self._network.fit_and_validate(X, y, epochs=1, batch_size=X.shape[0])
         should_update_target = self.total_training_timesteps % self._target_network_update_frequency == 0
         if should_update_target:
             self._target_network.load_state_dict(self._network.state_dict().copy())

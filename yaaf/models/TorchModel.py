@@ -31,16 +31,44 @@ class TorchModel(Module):
     # Training #
     # ######## #
 
-    def fit(self, X, y, epochs, batch_size, shuffle_dataset=True):
+    def fit_and_validate(self, X, y, epochs, batch_size,
+                         validation_split=0.0, X_val=None, y_val=None,
+                         observers=None, verbose=False):
 
-        """
-        Yields the avg batch loss
-        X:
-        y:
-        epochs:
-        batch_size:
-        shuffle_dataset:
-        """
+        self._check_device()
+        self._check_optimizer_initialization()
+
+        if not self.training: self.train()
+
+        dataset = TorchDataset(X, y, self._output_dtype, validation_split, X_val, y_val)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        observers = observers or []
+        train_losses = []
+        train_mean_losses = []
+        train_accuracies = []
+        validation_accuracies = []
+
+        for epoch in range(1, epochs + 1):
+            if verbose: print(f"\nTraining epoch {epoch}/{epochs}", flush=True)
+            iterator = tqdm(dataloader) if verbose else dataloader
+            train_losses.extend([self._fit_batch(X_batch, y_batch) for X_batch, y_batch in iterator])
+            train_mean_losses.append(torch.tensor(train_losses).mean().item())
+            train_accuracies.append(self.accuracy(dataset.X, dataset.y))
+            validation_accuracies.append(train_accuracies[-1] if dataset.no_validation_data else self.accuracy(dataset.X_val, dataset.y_val))
+            metrics = {
+                "training loss": train_mean_losses[-1],
+                "training accuracy": train_accuracies[-1],
+                "validation accuracy": validation_accuracies[-1]
+            }
+            [observer(epoch, **metrics) for observer in observers]
+            if verbose:
+                for metric_name in metrics:
+                    print(f"{metric_name}: {round(metrics[metric_name], 4)}", flush=True)
+
+        return train_mean_losses, train_accuracies, validation_accuracies
+
+    def fit(self, X, y, epochs, batch_size, shuffle_dataset=True):
 
         self._check_device()
         self._check_optimizer_initialization()
@@ -178,43 +206,3 @@ class TorchModel(Module):
         y_hat = self.classify(X)
         accuracy = f1_score(y, y_hat)
         return accuracy
-
-    def update(self, X, y, epochs, batch_size,
-               validation_split=0.0, X_val=None, y_val=None,
-               observers=None, verbose=False):
-
-        """ Use fit instead """
-
-        self._check_device()
-        self._check_optimizer_initialization()
-
-        if not self.training: self.train()
-
-        dataset = TorchDataset(X, y, self._output_dtype, validation_split, X_val, y_val)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-        observers = observers or []
-        train_losses = []
-        train_mean_losses = []
-        train_accuracies = []
-        validation_accuracies = []
-
-        for epoch in range(1, epochs + 1):
-            if verbose: print(f"\nTraining epoch {epoch}/{epochs}", flush=True)
-            iterator = tqdm(dataloader) if verbose else dataloader
-            train_losses.extend([self._fit_batch(X_batch, y_batch) for X_batch, y_batch in iterator])
-            train_mean_losses.append(torch.tensor(train_losses).mean().item())
-            train_accuracies.append(self.accuracy(dataset.X, dataset.y))
-            validation_accuracies.append(
-                train_accuracies[-1] if dataset.no_validation_data else self.accuracy(dataset.X_val, dataset.y_val))
-            metrics = {
-                "training loss": train_mean_losses[-1],
-                "training accuracy": train_accuracies[-1],
-                "validation accuracy": validation_accuracies[-1]
-            }
-            [observer(epoch, **metrics) for observer in observers]
-            if verbose:
-                for metric_name in metrics:
-                    print(f"{metric_name}: {round(metrics[metric_name], 4)}", flush=True)
-
-        return train_mean_losses, train_accuracies, validation_accuracies

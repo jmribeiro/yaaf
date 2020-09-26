@@ -15,7 +15,7 @@ class SupervisedLearningTests(TestCase):
     def _test_mlp_ocr(self, binary, cuda, epochs):
         dataset = OCRDataset(binary=binary)
         model = FeedForwardNetwork(num_inputs=dataset.num_features, num_outputs=dataset.num_classes, learning_rate=0.001, layers=[(200, "relu")], dropout=0.3, cuda=cuda)
-        model.update(dataset.X, dataset.y, epochs=epochs, batch_size=64, X_val=dataset.X_val, y_val=dataset.y_val)
+        model.fit_and_validate(dataset.X, dataset.y, epochs=epochs, batch_size=64, X_val=dataset.X_val, y_val=dataset.y_val)
         accuracy = model.accuracy(dataset.X_test, dataset.y_test)
         assert accuracy >= 0.85, f"Model only achieved {accuracy} accuracy."
 
@@ -24,14 +24,14 @@ class SupervisedLearningTests(TestCase):
         X = iris.data
         y = iris.target
         model = FeedForwardNetwork(num_inputs=X.shape[1], num_outputs=len(np.unique(y)), learning_rate=0.01, layers=[(64, "relu")], dropout=0.3, cuda=cuda)
-        model.update(X, y, epochs=epochs, batch_size=32, X_val=X, y_val=y)
+        model.fit_and_validate(X, y, epochs=epochs, batch_size=32, X_val=X, y_val=y)
         accuracy = model.accuracy(X, y)
         assert accuracy >= 0.85, f"Model only achieved {accuracy} accuracy."
 
     def _test_cnn_ocr(self, binary, cuda, epochs):
         dataset = OCRDataset(image=True, binary=binary)
         model = ConvNetForOCRDataset(cuda)
-        model.update(dataset.X, dataset.y, epochs=epochs, batch_size=64, X_val=dataset.X_val, y_val=dataset.y_val)
+        model.fit_and_validate(dataset.X, dataset.y, epochs=epochs, batch_size=64, X_val=dataset.X_val, y_val=dataset.y_val)
         accuracy = model.accuracy(dataset.X_test, dataset.y_test)
         assert accuracy >= 0.85, f"Model only achieved {accuracy} accuracy."
 
@@ -78,7 +78,7 @@ class PersistencyTests(TestCase):
             model = model_factory()
             untrained_accuracy = model.accuracy(X, y)
 
-        model.update(X, y, epochs=epochs, batch_size=32)
+        model.fit_and_validate(X, y, epochs=epochs, batch_size=32)
         pre_load_accuracy = model.accuracy(X, y)
         assert pre_load_accuracy >= acceptable_accuracy, f"Model only achieved {pre_load_accuracy} accuracy (required: {acceptable_accuracy})."
         model.save("tmp"); del model
