@@ -44,6 +44,8 @@ def flatten_dict(dictionary, parent_key='', separator='.'):
 def ndarray_index_from(collection, array):
     return [np.array_equal(array, other) for other in collection].index(True)
 
+def ndarray_in_collection(array, collection):
+    return True in [np.array_equal(array, other) for other in collection]
 
 def replace_in_directory(path: str, old: str, new: str):
 

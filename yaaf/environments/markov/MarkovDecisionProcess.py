@@ -1,11 +1,11 @@
-import math
 from typing import Sequence, Optional
 
 import numpy as np
 from gym import Env
 from gym.envs.registration import EnvSpec
 from gym.spaces import Box, Discrete
-from yaaf import ndarray_index_from
+
+import yaaf
 
 
 class MarkovDecisionProcess(Env):
@@ -17,9 +17,9 @@ class MarkovDecisionProcess(Env):
                  rewards: np.ndarray,
                  discount_factor: float,
                  initial_state_distribution: np.ndarray,
-                 min_value_iteration_error: float = 10e-8,
                  state_meanings: Optional[Sequence[str]] = None,
-                 action_meanings: Optional[Sequence[str]] = None):
+                 action_meanings: Optional[Sequence[str]] = None,
+                 terminal_states: Sequence[np.ndarray] = None):
 
         super(MarkovDecisionProcess, self).__init__()
 
@@ -30,7 +30,6 @@ class MarkovDecisionProcess(Env):
 
         self._actions = actions
         self._num_actions = len(actions)
-        self.action_space = Discrete(len(actions))
         self.action_meanings = action_meanings or ["<UNK>" for _ in range(self._num_actions)]
 
         self._P = transition_probabilities
@@ -46,14 +45,16 @@ class MarkovDecisionProcess(Env):
             high=states_tensor.max(),
             shape=self._states[0].shape,
             dtype=states_tensor.dtype)
-
+        self.action_space = Discrete(self._num_actions)
         self.reward_range = (rewards.min(), rewards.max())
         self.metadata = {}
 
-        # Value Iteration
-        self._min_value_iteration_error = min_value_iteration_error
-
         self._state = self.reset()
+        self._terminal_states = terminal_states if terminal_states is not None else []
+
+    # ########## #
+    # OpenAI Gym #
+    # ########## #
 
     def reset(self):
         x = np.random.choice(range(self.num_states), p=self._miu)
@@ -62,17 +63,21 @@ class MarkovDecisionProcess(Env):
         return initial_state
 
     def step(self, action):
-        next_state, reward = self.transition(self.state, action)
+        next_state = self.transition(self.state, action)
+        reward = self.reward(self.state, action, next_state)
         is_terminal = self.is_terminal(next_state)
         self._state = next_state
         return next_state, reward, is_terminal, {}
+
+    # ### #
+    # MDP #
+    # ### #
 
     def transition(self, state, action):
         x = self.state_index(state)
         y = np.random.choice(self.num_states, p=self.P[action, x])
         next_state = self.states[y]
-        reward = self.reward(x, action, y)
-        return next_state, reward
+        return next_state
 
     def reward(self, state, action, next_state):
         x = self.state_index(state) if not isinstance(state, int) else state
@@ -82,81 +87,86 @@ class MarkovDecisionProcess(Env):
         elif self.R.shape == (self.num_states, self.num_actions, self.num_states): return self.R[x, action, y]
         else: raise ValueError("Invalid reward matrix R.")
 
-    # ############### #
-    # Value Iteration #
-    # ############### #
+    def is_terminal(self, state):
+        return yaaf.ndarray_in_collection(state, self._terminal_states)
 
     @property
-    def policy(self):
-        """
-        Computes (or returns, if already computed)
-        the optimal policy for the MDP using value iteration.
-        """
+    def optimal_policy(self, method="policy iteration", **kwargs) -> np.ndarray:
         if not hasattr(self, "_pi"):
-            self._pi = np.zeros((self.num_states, self.num_actions))
-            for s in range(self.num_states):
-                optimal_actions = np.argwhere(self.q_values[s] == self.q_values[s].max()).reshape(-1)
-                self._pi[s, optimal_actions] = 1.0 / len(optimal_actions)
+            greedy_q_value_tolerance = kwargs["greedy_q_value_tolerance"] if "greedy_q_value_tolerance" in kwargs else 10e-10
+            if method == "policy iteration":
+                self._pi = self.policy_iteration(greedy_q_value_tolerance)
+            elif method == "value iteration":
+                min_error = kwargs["min_error"] if "min_error" in kwargs else 10e-8
+                V = self.value_iteration(min_error)
+                Q = self.q_values(V)
+                self._pi = self.extract_policy(Q, greedy_q_value_tolerance)
+            else:
+                raise ValueError(f"Invalid solution method for {self.spec.id} '{method}'")
         return self._pi
 
-    def evaluate_policy(self, pi):
-        """
-        Evaluates a given policy pi in the MDP.
-        """
-        policy_values = np.zeros(self.num_states)
-        q = self.q_values
-        for s in range(self.num_states):
-            policy_values[s] = pi[s].dot(q[s])
-        return policy_values
-
     @property
-    def q_values(self) -> np.ndarray:
-        if not hasattr(self, "_q_values"): self._q_values, self._V = self._value_iteration()
+    def optimal_q_values(self) -> np.ndarray:
+        if not hasattr(self, "_q_values"):
+            V = self.optimal_values
+            self._q_values = self.q_values(V)
         return self._q_values
 
     @property
-    def values(self) -> np.ndarray:
-        if not hasattr(self, "_values"): self._Qstar, self._values = self._value_iteration()
+    def optimal_values(self) -> np.ndarray:
+        if not hasattr(self, "_values"):
+            self._values = self.value_iteration()
         return self._values
 
-    def _value_iteration(self):
+    def value_iteration(self, min_error=1e-8):
+        V = np.zeros(self.num_states)
+        converged = False
+        while not converged:
+            Q = self.q_values(V)
+            V_next = np.max(Q, axis=1)
+            converged = np.linalg.norm(V - V_next) <= min_error
+            V = V_next
+        return V
 
-        """
-        Solves the MDP using value iteration
-        Returns the Optimal Q function Q*
-        """
+    def policy_iteration(self, greedy_q_value_tolerance=1e-10):
+        policy = np.ones((self.num_states, self.num_actions)) / self.num_actions
+        converged = False
+        while not converged:
+            Q = self.policy_q_values(policy)
+            next_policy = self.extract_policy(Q, greedy_q_value_tolerance)
+            converged = (policy == next_policy).all()
+            policy = next_policy
+        return policy
 
-        A = self.num_actions
-        X = self.num_states
-        P = self.P
+    def policy_values(self, policy: np.ndarray):
+        if policy.shape != (self.num_states, self.num_actions):
+            raise ValueError(f"Invalid policy shape {policy.shape}. Policies for {self.spec.id} should have shape {(self.num_states, self.num_actions)}")
+        R_pi = (policy * self.R).sum(axis=1)
+        P_pi = np.zeros((self.num_states, self.num_states))
+        for a in range(self.num_actions): P_pi += policy[:, a].reshape(-1, 1) * self.P[a]
+        V_pi = np.linalg.inv(np.eye(self.num_states) - self.gamma * P_pi).dot(R_pi)
+        return V_pi
 
-        if self.R.shape == (X, A):
-            R = self.R
-        elif self.R.shape == (X,):
-            # FIXME - Find clever way
-            R = np.zeros((X, A))
-            for state in self.states:
-                s = self.state_index(state)
-                R[s, :] = self.R[s]
-        elif self.R.shape == (X, A, X):
-            # TODO
-            raise NotImplementedError()
-        else:
-            raise ValueError("Invalid reward matrix.")
+    def q_values(self, values: np.ndarray):
+        if values.shape != (self.num_states,):
+            raise ValueError(f"Invalid values shape {values.shape}. Values for {self.spec.id} should have shape {(self.num_states,)}")
+        values_as_column = values.reshape(-1, 1)
+        Q = np.array([self.R[:, a].reshape(-1, 1) + self.gamma * self.P[a].dot(values_as_column) for a in range(self.num_actions)])[:, :, -1].T
+        return Q
 
-        V = np.zeros(X)
-        Q = np.zeros((X, A))
+    def policy_q_values(self, policy: np.ndarray):
+        if policy.shape != (self.num_states, self.num_actions):
+            raise ValueError(f"Invalid policy shape {policy.shape}. Policies for {self.spec.id} should have shape {(self.num_states, self.num_actions)}")
+        V_pi = self.policy_values(policy)
+        Q_pi = self.q_values(V_pi)
+        return Q_pi
 
-        error = math.inf
-        while error > self._min_value_iteration_error:
-            for a in range(A):
-                Q[:, a] = R[:, a] + self._discount_factor * P[a].dot(V)
-            Qa = tuple([Q[:, a] for a in range(A)])
-            V_new = np.max(Qa, axis=0)
-            error = np.linalg.norm(V_new - V)
-            V = V_new
-
-        return Q, V
+    def extract_policy(self, q_values: np.ndarray, greedy_q_value_tolerance=10e-10) -> np.ndarray:
+        if q_values.shape != (self.num_states, self.num_actions):
+            raise ValueError(f"Invalid q-values shape {q_values.shape}. Q-Values for {self.spec.id} should have shape {(self.num_states, self.num_actions)}")
+        Q_greedy = np.isclose(q_values, q_values.max(axis=1, keepdims=True), atol=greedy_q_value_tolerance, rtol=greedy_q_value_tolerance).astype(int)
+        policy = Q_greedy / Q_greedy.sum(axis=1, keepdims=True)
+        return policy
 
     # ########## #
     # Properties #
@@ -219,6 +229,10 @@ class MarkovDecisionProcess(Env):
     def miu(self):
         return self._miu
 
+    @property
+    def terminal_states(self):
+        return self._terminal_states
+
     # ######### #
     # Auxiliary #
     # ######### #
@@ -233,7 +247,71 @@ class MarkovDecisionProcess(Env):
     @staticmethod
     def state_index_from(states, state):
         """Returns the index of a state (array) in a list of states"""
-        return ndarray_index_from(states, state)
+        return yaaf.ndarray_index_from(states, state)
 
-    def is_terminal(self, state):
-        return False
+    # ########### #
+    # Persistence #
+    # ########### #
+
+    @property
+    def available_save_formats(self):
+        return [
+            "numpy",
+            "numpy zip",
+            "yaml"
+        ]
+
+    def save(self, directory, format="numpy"):
+        if format == "numpy": self.save_numpy(directory)
+        elif format == "numpy zip": self.save_numpy_zip(directory)
+        elif format == "yaml": self.save_yaml(directory)
+        else: raise ValueError(f"Invalid save format {format}. Please pick one of the following: {self.available_save_formats}")
+
+    def save_numpy(self, directory):
+        yaaf.mkdir(directory)
+        np.save(f"{directory}/name", self.spec.id)
+        np.save(f"{directory}/X", self.states)
+        np.save(f"{directory}/A", self.actions)
+        np.save(f"{directory}/P", self.transition_probabilities)
+        np.save(f"{directory}/R", self.rewards)
+        np.save(f"{directory}/gamma", self.gamma)
+        np.save(f"{directory}/miu", self.initial_state_distribution)
+        np.save(f"{directory}/X_meanings", self.state_meanings)
+        np.save(f"{directory}/A_meanings", self.action_meanings)
+        np.save(f"{directory}/X_terminal", self.terminal_states)
+
+    def save_numpy_zip(self, directory):
+        # TODO
+        raise NotImplementedError()
+
+    def save_yaml(self, directory):
+        # TODO
+        raise NotImplementedError()
+
+    @staticmethod
+    def load_numpy(directory):
+        name = str(np.load(f"{directory}/name.npy"))
+        states = np.load(f"{directory}/X.npy")
+        actions = np.load(f"{directory}/A.npy")
+        transition_probabilities = np.load(f"{directory}/P.npy")
+        rewards = np.load(f"{directory}/R.npy")
+        discount_factor = float(np.load(f"{directory}/gamma.npy"))
+        initial_state_distribution = np.load(f"{directory}/miu.npy")
+        state_meanings = tuple(np.load(f"{directory}/X_meanings.npy"))
+        action_meanings = tuple(np.load(f"{directory}/A_meanings.npy"))
+        terminal_states = np.load(f"{directory}/X_terminal.npy")
+        mdp = MarkovDecisionProcess(
+            name, states, actions, transition_probabilities, rewards, discount_factor, initial_state_distribution,
+            state_meanings, action_meanings, terminal_states
+        )
+        return mdp
+
+    @staticmethod
+    def load_numpy_zip(directory):
+        # TODO
+        raise NotImplementedError()
+
+    @staticmethod
+    def load_yaml(directory):
+        # TODO
+        raise NotImplementedError()

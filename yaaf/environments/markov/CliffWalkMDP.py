@@ -2,10 +2,12 @@ import numpy as np
 
 from yaaf.environments.markov import MarkovDecisionProcess as MDP
 
-
 class CliffWalkMDP(MDP):
 
-    def __init__(self, rows=4, columns=12, discount_factor=1.0):
+    def __init__(self):
+
+        rows = 4
+        columns = 12
 
         X = tuple([np.array([x, y]) for x in range(columns) for y in range(rows)])
         A = tuple(range(4))
@@ -21,6 +23,8 @@ class CliffWalkMDP(MDP):
         goal_state_index = MDP.state_index_from(X, self._goal_state)
         cliff_state_indices = tuple([MDP.state_index_from(X, cliff) for cliff in cliff_states])
 
+        discount_factor = 0.95
+
         miu = np.zeros(num_states)
         miu[start_state_index] = 1.0
 
@@ -33,10 +37,7 @@ class CliffWalkMDP(MDP):
 
         super().__init__("CliffWalkMDP-v0",
                          X, A, P, R, discount_factor, miu,
-                         action_meanings=("Up", "Down", "Left", "Right"))
-
-    def is_terminal(self, state):
-        return np.array_equal(state, self._goal_state)
+                         action_meanings=("Up", "Down", "Left", "Right"), terminal_states=[self._goal_state])
 
     def render(self, mode="human"):
         pass

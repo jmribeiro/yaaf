@@ -31,10 +31,9 @@ class WindyGridWorldMDP(MDP):
 
         super(WindyGridWorldMDP, self).__init__("WindyGridWorldMDP-v0",
                                                 X, A, P, R, discount_factor, miu,
-                                                action_meanings=("Up", "Down", "Left", "Right"))
+                                                action_meanings=("Up", "Down", "Left", "Right"),
+                                                terminal_states=[self._goal_state])
 
-    def is_terminal(self, state):
-        return np.array_equal(state, self._goal_state)
 
     # ######### #
     # Rendering #

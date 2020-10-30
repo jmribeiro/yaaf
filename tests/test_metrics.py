@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from yaaf.agents import GreedyAgent
+from yaaf.agents import GreedyMDPAgent
 from yaaf.environments.markov import WindyGridWorldMDP
 from yaaf.evaluation import TimestepsPerEpisodeMetric, AverageReturnMetric
 from yaaf.evaluation import TotalTimestepsMetric
@@ -12,7 +12,7 @@ class MetricTests(TestCase):
     def test_timesteps_per_episode_metric(self):
         num_episodes = 1
         mdp = WindyGridWorldMDP()
-        agent = GreedyAgent(mdp)
+        agent = GreedyMDPAgent(mdp)
         metric = TimestepsPerEpisodeMetric()
         runner = EpisodeRunner(episodes=num_episodes, agent=agent, environment=mdp, observers=[metric])
         runner.run()
@@ -23,7 +23,7 @@ class MetricTests(TestCase):
     def test_average_return_metric(self):
         num_episodes = 1
         mdp = WindyGridWorldMDP()
-        agent = GreedyAgent(mdp)
+        agent = GreedyMDPAgent(mdp)
         metric = AverageReturnMetric()
         runner = EpisodeRunner(episodes=num_episodes, agent=agent, environment=mdp, observers=[metric])
         runner.run()
@@ -34,7 +34,7 @@ class MetricTests(TestCase):
     def test_total_timesteps_metric(self):
         num_episodes = 1
         mdp = WindyGridWorldMDP()
-        agent = GreedyAgent(mdp)
+        agent = GreedyMDPAgent(mdp)
         metric = TotalTimestepsMetric()
         runner = EpisodeRunner(episodes=num_episodes, agent=agent, environment=mdp, observers=[metric])
         runner.run()
