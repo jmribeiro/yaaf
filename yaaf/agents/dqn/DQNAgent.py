@@ -137,7 +137,7 @@ class DQNAgent(Agent):
         for t, (observation, action, reward, next_observation, terminal, _) in enumerate(batch):
             # TODO - Vectorize these computations (batched forward instead of 1-by-one)
             target_q_values = target_q_fn(observation)
-            next_target_q_values = reward if terminal else reward + gamma * target_q_fn(next_observation).argmax()
+            next_target_q_values = reward if terminal else reward + gamma * target_q_fn(next_observation).max()
             target_q_values[action] = next_target_q_values
             X[t] = torch.tensor(observation)
             y[t] = target_q_values
