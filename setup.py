@@ -20,7 +20,6 @@ setup(
         "gym",
         "torch",
         "torchvision",
-        "tensorflow",
         "sklearn",
         "pyyaml",
         "pyparsing",
