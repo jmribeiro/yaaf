@@ -19,7 +19,6 @@ setup(
         "matplotlib",
         "gym",
         "torch",
-        "torchvision",
         "sklearn",
         "pyyaml",
         "pyparsing",
