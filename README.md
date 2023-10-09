@@ -1,3 +1,19 @@
+Archival (Oct 9th, 2023)
+
+This repository started as a side project in 2019, for reusing code in my research, when all the RL frameworks were under heavy constraints, such as being tied to a specific deep learning framework (Tensorflow/Pytorch) or did not define a clear interface for an agent.
+
+As of today, plenty similar projects to yaaf exist which are constantly maintained by large teams.
+The one I'm currently using and highly recommend, is [PFRL](https://github.com/pfnet/pfrl).
+
+If you'd rather choose yourself, I leave with a list of alternatives:
+- [cleanRL](https://github.com/vwxyzjn/cleanrl)
+- [ACME](https://github.com/google-deepmind/acme)
+- [dopamine](https://github.com/google/dopamine)
+- [tf-agents](https://github.com/tensorflow/agents)
+- [spinning-up](https://spinningup.openai.com/en/latest/)
+- [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3)
+- [RLlib](https://github.com/ray-project/ray/tree/master/rllib)
+
 # Yet Another Agents Framework
 
 _An RL research-oriented framework for agent prototyping and evaluation_
